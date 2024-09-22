@@ -4,74 +4,121 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grade Calculator</title>
-    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
-    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        label, input, button {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .output {
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
+
     <h1>Grade Calculator</h1>
-    <p>Enter your Prelim grade to calculate the required Midterm and Final grades to achieve a passing grade of 75.</p>
-    <p>If you're aiming for the Dean's Lister (subject grade > 90), you'll see the required grades for that as well.</p>
+    <h2>Enter Your Prelim Grade</h2>
 
-    <label for="prelim-grade">Prelim Grade (0-100): </label>
-    <input type="text" id="prelim-grade" /><br><br>
+    <div class="container">
+        <p>Enter your Prelim grade to calculate the required Midterm and Final grades to achieve a final average of at least 75. Check the randomizer to see alternate results.</p>
 
-    <input type="checkbox" id="randomize" />
-    <label for="randomize">Randomize Results</label><br><br>
+        <label for="prelim-grade">Prelim Grade (0-100):</label>
+        <input type="number" id="prelim-grade" placeholder="Enter Prelim Grade" min="0" max="100">
 
-    <button onclick="calculateGrades()">Calculate</button>
+        <label for="randomize">Randomize Results:</label>
+        <input type="checkbox" id="randomize">
 
-    <h2>Results:</h2>
-    <div id="result"></div>
+        <button id="calculate-btn">Calculate Required Grades</button>
+
+        <div class="output" id="result"></div>
+    </div>
+
+    <!-- PyScript Environment Setup -->
+    <py-env>
+        - numpy
+        - random
+    </py-env>
 
     <py-script>
-        def calculate_grades(prelim, randomize=False):
+        from pyscript import Element, create_proxy
+        import random
+
+        def calculate_grades(prelim_grade, randomize):
+            prelim_weight = 0.20
+            midterm_weight = 0.30
+            final_weight = 0.50
+            passing_grade = 75
+            deans_lister_grade = 90
+
+            # Check if input is a valid number
             try:
-                prelim = float(prelim)
-                if not (0 <= prelim <= 100):
-                    return "Please enter a valid Prelim grade between 0 and 100."
-
-                # Target final grade is 75 for passing, 90 for Dean's Lister
-                passing_grade = 75
-                deans_grade = 90
-
-                # Grade weights
-                prelim_weight = 0.20
-                midterm_weight = 0.30
-                final_weight = 0.50
-
-                # Calculate necessary midterm and final grades for passing
-                remaining_passing = passing_grade - prelim * prelim_weight
-                required_midterm = (remaining_passing / (midterm_weight + final_weight)) / (midterm_weight / final_weight)
-                required_final = (remaining_passing - required_midterm * midterm_weight) / final_weight
-
-                # Calculate necessary midterm and final grades for Dean's Lister
-                remaining_deans = deans_grade - prelim * prelim_weight
-                required_midterm_deans = (remaining_deans / (midterm_weight + final_weight)) / (midterm_weight / final_weight)
-                required_final_deans = (remaining_deans - required_midterm_deans * midterm_weight) / final_weight
-
-                if randomize:
-                    import random
-                    required_midterm = random.uniform(50, 100)
-                    required_final = random.uniform(50, 100)
-                    required_midterm_deans = random.uniform(80, 100)
-                    required_final_deans = random.uniform(80, 100)
-
-                return f"""
-                    Prelim Grade: {prelim}
-                    Required Midterm Grade: {required_midterm:.2f}
-                    Required Final Grade: {required_final:.2f}
-                    To qualify for Dean's Lister: 
-                    Required Midterm Grade: {required_midterm_deans:.2f}
-                    Required Final Grade: {required_final_deans:.2f}
-                """
+                prelim_grade = float(prelim_grade)
             except ValueError:
-                return "Please enter a valid numeric grade."
+                return "Invalid input! Please enter a number between 0 and 100."
 
-        def calculateGrades():
-            prelim_grade = Element("prelim-grade").element.value
+            if not (0 <= prelim_grade <= 100):
+                return "Prelim grade must be between 0 and 100."
+
+            required_average = passing_grade - (prelim_grade * prelim_weight)
+            
+            if randomize:
+                midterm_needed = round(random.uniform(60, 80), 2)
+                final_needed = round((passing_grade - (prelim_grade * prelim_weight) - (midterm_needed * midterm_weight)) / final_weight, 2)
+                midterm_deans = round(random.uniform(85, 90), 2)
+                final_deans = round((deans_lister_grade - (prelim_grade * prelim_weight) - (midterm_deans * midterm_weight)) / final_weight, 2)
+            else:
+                midterm_needed = round(required_average / (midterm_weight + final_weight), 2)
+                final_needed = round((required_average - (midterm_needed * midterm_weight)) / final_weight, 2)
+                midterm_deans = round(deans_lister_grade / (midterm_weight + final_weight), 2)
+                final_deans = round((deans_lister_grade - (prelim_grade * prelim_weight) - (midterm_deans * midterm_weight)) / final_weight, 2)
+
+            result = f"Prelim Grade: {prelim_grade}<br>"
+            result += f"To pass, you need a Midterm grade of {midterm_needed} and a Final grade of {final_needed}.<br>"
+            result += f"To qualify for Dean's Lister, you need a Midterm grade of {midterm_deans} and a Final grade of {final_deans}."
+
+            return result
+
+        def on_button_click(*args):
+            prelim_grade = Element("prelim-grade").value
             randomize = Element("randomize").element.checked
             result = calculate_grades(prelim_grade, randomize)
-            Element("result").element.innerHTML = result
+            pyscript.write("result", result)
+
+        # Create a proxy to ensure the callback remains accessible
+        proxy_callback = create_proxy(on_button_click)
+        
+        # Bind the function to the button click
+        Element("calculate-btn").element.addEventListener("click", proxy_callback)
     </py-script>
+
+    <!-- Load the latest PyScript version -->
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+
 </body>
 </html>
